@@ -17,6 +17,13 @@ namespace PipeDreamClone
 
         private List<Vector2> FloodTracker = new List<Vector2>();
 
+        public Dictionary<string, FallingPiece> fallingPieces =
+            new Dictionary<string, FallingPiece>();
+        public Dictionary<string, RotatingPiece> rotatingPieces =
+            new Dictionary<string, RotatingPiece>();
+        public Dictionary<string, FadingPiece> fadingPieces =
+            new Dictionary<string, FadingPiece>();
+
         public GameBoard()
         {
             Clear();
@@ -69,6 +76,7 @@ namespace PipeDreamClone
                 {
                     SetPieceType(c, r, GetPieceType(c, upOneRow));
                     SetPieceType(c, upOneRow, Piece.pieceTypes.EMPTY);
+                    AddFallingPiece(c, r, GetPieceType(c, r), Piece.height * (r - upOneRow));
                     upOneRow = -1;
                 }
 
@@ -95,7 +103,12 @@ namespace PipeDreamClone
                 for (int r = 0; r < GameBoard.height; r++)
                 {
                     if (GetPieceType(c, r) == Piece.pieceTypes.EMPTY)
+                    {
                         SetRandomPiece(c, r);
+                        // Piece.height is the height of an individual pice.
+                        // height is the total size of the game board in terms of piece count
+                        AddFallingPiece(c, r, GetPieceType(c, r), Piece.height * height);
+                    }
                 }
             }
         }
@@ -151,6 +164,92 @@ namespace PipeDreamClone
             FloodTracker.Clear();
             PropogateFlooding(0, r, Piece.sides.LEFT);
             return FloodTracker;
+        }
+
+        public void AddFallingPiece(int c, int r, Piece.pieceTypes type, int vertOffset)
+        {
+            fallingPieces[c.ToString() + "_" + r.ToString()] = new FallingPiece(type, vertOffset);
+        }
+
+        public void AddRotatingPiece(int c, int r, Piece.pieceTypes type, bool clkwise)
+        {
+            rotatingPieces[c.ToString() + "_" + r.ToString()] = new RotatingPiece(type, clkwise);
+        }
+
+        public void AddFadingPiece(int c, int r, Piece.pieceTypes type)
+        {
+            fadingPieces[c.ToString() + "_" + r.ToString()] = new FadingPiece(type, true);
+        }
+
+        public bool PiecesAreAnimating()
+        {
+            if ((fallingPieces.Count == 0) &&
+                (rotatingPieces.Count == 0) &&
+                (fadingPieces.Count == 0))
+                return false;
+            else
+                return true;
+        }
+
+        public void UpdateFadingPieces()
+        {
+            Queue<string> toRemove = new Queue<string>();
+
+            foreach (string key in fadingPieces.Keys)
+            {
+                fadingPieces[key].UpdatePiece();
+
+                if (fadingPieces[key].alphaLevel == 0.0f)
+                    toRemove.Enqueue(key.ToString());
+            }
+
+            while (toRemove.Count > 0)
+                fadingPieces.Remove(toRemove.Dequeue());
+        }
+
+        public void UpdateFallingPieces()
+        {
+            Queue<string> toRemove = new Queue<string>();
+
+            foreach (string key in fallingPieces.Keys)
+            {
+                fallingPieces[key].UpdatePiece();
+
+                if (fallingPieces[key].vertOffset == 0)
+                    toRemove.Enqueue(key.ToString());
+            }
+
+            while (toRemove.Count > 0)
+                fallingPieces.Remove(toRemove.Dequeue());
+        }
+
+        public void UpdateRotatingPieces()
+        {
+            Queue<string> toRemove = new Queue<string>();
+
+            foreach (string key in rotatingPieces.Keys)
+            {
+                rotatingPieces[key].UpdatePiece();
+
+                if (rotatingPieces[key].rotTicksRemaining == 0)
+                    toRemove.Enqueue(key.ToString());
+            }
+
+            while (toRemove.Count > 0)
+                rotatingPieces.Remove(toRemove.Dequeue());
+        }
+
+        public void UpdateAnimatingPieces()
+        {
+            if (fadingPieces.Count == 0)
+            {
+                UpdateFallingPieces();
+                UpdateRotatingPieces();
+            }
+            else
+            {
+                UpdateFadingPieces();
+            }
         }
     }
 }

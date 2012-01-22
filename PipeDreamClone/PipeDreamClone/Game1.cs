@@ -86,16 +86,23 @@ namespace PipeDreamClone
                 case GameStates.Playing:
                     timeSinceLastInput += (float)gameTime.ElapsedGameTime.TotalSeconds;
 
-                    if (timeSinceLastInput >= MinTimeBetweenInputs)
+                    if (gameBoard.PiecesAreAnimating())
                     {
-                        HandleMouseInput(Mouse.GetState());
+                        gameBoard.UpdateAnimatingPieces();
                     }
+                    else
+                    {
+                        gameBoard.ResetFlooding();
 
-                    gameBoard.ResetFlooding();
-                    for (int r = 0; r < GameBoard.height; r++)
-                        CheckForScoringConnections(gameBoard.GetFloodedChain(r));
+                        for (int r = 0; r < GameBoard.height; r++)
+                            CheckForScoringConnections(gameBoard.GetFloodedChain(r));
 
-                    gameBoard.GeneratePieces(true);
+                        gameBoard.GeneratePieces(true);
+
+                        if (timeSinceLastInput >= MinTimeBetweenInputs)
+                            HandleMouseInput(Mouse.GetState());
+
+                    }
                     break;
             }
 
@@ -131,16 +138,34 @@ namespace PipeDreamClone
                     {
                         int x = (int)gameBoardDisplayOffset.X + (c * Piece.width);
                         int y = (int)gameBoardDisplayOffset.Y + (r * Piece.height);
+                        //string pos = x.ToString() + "_" + y.ToString();
+                        string pos = c.ToString() + "_" + r.ToString();
+                        bool isNormal = true;
 
-                        spriteBatch.Draw(gamePieces, new Rectangle(x, y,
-                            Piece.width, Piece.height),
-                            emptyTilePointer,
-                            Color.White);
+                        DrawEmptyPiece(x, y);
 
-                        spriteBatch.Draw(gamePieces, new Rectangle(x, y,
-                            Piece.width, Piece.height),
-                            gameBoard.GetBlitRect(c, r),
-                            Color.White);
+                        if (gameBoard.rotatingPieces.ContainsKey(pos))
+                        {
+                            DrawRotatingPiece(x, y, pos);
+                            isNormal = false;
+                        }
+
+                        if (gameBoard.fadingPieces.ContainsKey(pos))
+                        {
+                            DrawFadingPiece(x, y, pos);
+                            isNormal = false;
+                        }
+
+                        if (gameBoard.fallingPieces.ContainsKey(pos))
+                        {
+                            DrawFallingPiece(x, y, pos);
+                            isNormal = false;
+                        }
+
+                        if (isNormal)
+                            DrawNormalPiece(x, y, c, r);
+
+
                     }
                 }
 
@@ -174,6 +199,13 @@ namespace PipeDreamClone
 
                         foreach (Vector2 piece in PipeChain)
                         {
+                            gameBoard.AddFadingPiece(
+                                (int)piece.X,
+                                (int)piece.Y,
+                                gameBoard.GetPieceType(
+                                (int)piece.X,
+                                (int)piece.Y));
+
                             gameBoard.SetPieceType(
                                 (int)piece.X,
                                 (int)piece.Y,
@@ -194,16 +226,77 @@ namespace PipeDreamClone
             {
                 if (mouseState.LeftButton == ButtonState.Pressed)
                 {
+                    gameBoard.AddRotatingPiece(c, r, gameBoard.GetPieceType(c, r), false);
                     gameBoard.RotatePiece(c, r, false);
                     timeSinceLastInput = 0.0f;
                 }
 
                 if (mouseState.RightButton == ButtonState.Pressed)
                 {
-                    gameBoard.RotatePiece(c, r, true);
+                    gameBoard.AddRotatingPiece(c, r, gameBoard.GetPieceType(c, r), true);
+                    gameBoard.RotatePiece(c, r, true);                  
                     timeSinceLastInput = 0.0f;
                 }
             }
+        }
+
+        private void DrawEmptyPiece(int x, int y)
+        {
+            spriteBatch.Draw(
+                gamePieces,
+                new Rectangle(x, y, Piece.width, Piece.height),
+                emptyTilePointer,
+                Color.White);
+        }
+
+        private void DrawNormalPiece(int x, int y, int boardCol, int boardRow)
+        {
+            spriteBatch.Draw(
+                gamePieces,
+                new Rectangle(x, y, Piece.width, Piece.height),
+                gameBoard.GetBlitRect(boardCol, boardRow),
+                Color.White);
+        }
+
+        private void DrawFallingPiece(int x, int y, string dictKey)
+        {
+            spriteBatch.Draw(
+                gamePieces,
+                new Rectangle(
+                    x,
+                    y - gameBoard.fallingPieces[dictKey].vertOffset,
+                    Piece.width,
+                    Piece.height),
+                gameBoard.fallingPieces[dictKey].GetBlitRect(),
+                Color.White);
+        }
+
+        private void DrawFadingPiece(int x, int y, string dictKey)
+        {
+            spriteBatch.Draw(
+                gamePieces,
+                new Rectangle(x, y, Piece.width, Piece.height),
+                gameBoard.fadingPieces[dictKey].GetBlitRect(),
+                Color.White * gameBoard.fadingPieces[dictKey].alphaLevel);
+        }
+
+        private void DrawRotatingPiece(int x, int y, string dictKey)
+        {
+            spriteBatch.Draw(
+                gamePieces,
+                new Rectangle(
+                    x + (Piece.width / 2),
+                    y + (Piece.height / 2),
+                    Piece.width,
+                    Piece.height),
+                gameBoard.rotatingPieces[dictKey].GetBlitRect(),
+                Color.White,
+                gameBoard.rotatingPieces[dictKey].RotAmount,
+                new Vector2(
+                    Piece.width / 2,
+                    Piece.height / 2),
+                SpriteEffects.None,
+                0.0f);
         }
     }
 }
