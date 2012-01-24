@@ -43,7 +43,7 @@ namespace PipeDreamClone
 
         // Variables for handling the flooding and loosing conditions
         const float MaxFloodCounter = 100.0f;
-        float floadAmount = 0.0f;
+        float floodAmount = 0.0f;
         float timeSinceLastFloodIncrease = 0.0f;
         float timeBetweenFloodTicks = 1.0f;
         float floodIncreaseAmount = 0.5f;
@@ -52,7 +52,7 @@ namespace PipeDreamClone
         const int MaxWaterHeight = 244;
         const int WaterWidth = 297; 
         Vector2 waterOverlayOffset = new Vector2(85, 245);
-        Vector2 waterPositionOffset = new Vector(478, 338);
+        Vector2 waterPositionOffset = new Vector2(478, 338);
 
         public Game1()
         {
@@ -99,6 +99,7 @@ namespace PipeDreamClone
                         gameBoard.Clear();
                         gameBoard.GeneratePieces(false);
                         playerScore = 0;
+                        floodAmount = 0;
                         gameState = GameStates.Playing;
                     }
                     break;
@@ -110,7 +111,7 @@ namespace PipeDreamClone
                     if (timeSinceLastFloodIncrease >= timeBetweenFloodTicks)
                     {
                         floodAmount += floodIncreaseAmount;
-                        timeSinceaLastFloodIncrease = 0.0f;
+                        timeSinceLastFloodIncrease = 0.0f;
                         
                         if (floodAmount >= MaxFloodCounter)
                         {
@@ -139,10 +140,10 @@ namespace PipeDreamClone
                     break;
 
                 case GameStates.GameOver:
-                    gameOverTime -= (float) gameTime.ElapsedGameTime.TotalSeconds;
+                    gameOverTimer -= (float) gameTime.ElapsedGameTime.TotalSeconds;
 
                     if (gameOverTimer <= 0)
-                        gameState = GameStates.TitleScreen
+                        gameState = GameStates.Title;
                     break;
             }
 
@@ -211,7 +212,7 @@ namespace PipeDreamClone
 
                 spriteBatch.DrawString(
                         pericles36Font,
-                        playerScore.ToString();
+                        playerScore.ToString(),
                         scoreDisplayOffset,
                         Color.Black);
 
