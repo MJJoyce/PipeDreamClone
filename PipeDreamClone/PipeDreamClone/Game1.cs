@@ -24,16 +24,35 @@ namespace PipeDreamClone
         GameBoard gameBoard;
 
         Vector2 gameBoardDisplayOffset = new Vector2(70, 89);
+        Vector2 scoreDisplayOffset = new Vector2(605, 215);
+        Vector2 gameOverDisplayOffset = new Vector2(200, 260);
 
         int playerScore = 0;
 
-        enum GameStates { Title, Playing };
+        enum GameStates { Title, Playing, GameOver };
         GameStates gameState = GameStates.Title;
 
         Rectangle emptyTilePointer = new Rectangle(1, 247, 40, 40);
 
         const float MinTimeBetweenInputs = 0.25f;
         float timeSinceLastInput = 0.0f;
+        
+        SpriteFont pericles36Font;
+
+        float gameOverTimer;
+
+        // Variables for handling the flooding and loosing conditions
+        const float MaxFloodCounter = 100.0f;
+        float floadAmount = 0.0f;
+        float timeSinceLastFloodIncrease = 0.0f;
+        float timeBetweenFloodTicks = 1.0f;
+        float floodIncreaseAmount = 0.5f;
+
+        // Variables for displaying the total flooding in the water tank
+        const int MaxWaterHeight = 244;
+        const int WaterWidth = 297; 
+        Vector2 waterOverlayOffset = new Vector2(85, 245);
+        Vector2 waterPositionOffset = new Vector(478, 338);
 
         public Game1()
         {
@@ -58,6 +77,7 @@ namespace PipeDreamClone
             gamePieces = Content.Load<Texture2D>(@"Textures\Tile_Sheet");
             bg = Content.Load<Texture2D>(@"Textures\Background");
             title = Content.Load<Texture2D>(@"Textures\TitleScreen");
+            pericles36Font = Content.Load<SpriteFont>(@"Fonts\Pericles36");
         }
 
         protected override void UnloadContent()
@@ -85,6 +105,19 @@ namespace PipeDreamClone
 
                 case GameStates.Playing:
                     timeSinceLastInput += (float)gameTime.ElapsedGameTime.TotalSeconds;
+                    timeSinceLastFloodIncrease += (float)gameTime.ElapsedGameTime.TotalSeconds;
+
+                    if (timeSinceLastFloodIncrease >= timeBetweenFloodTicks)
+                    {
+                        floodAmount += floodIncreaseAmount;
+                        timeSinceaLastFloodIncrease = 0.0f;
+                        
+                        if (floodAmount >= MaxFloodCounter)
+                        {
+                            gameOverTimer = 8.0f;
+                            gameState = GameStates.GameOver;
+                        }
+                    }
 
                     if (gameBoard.PiecesAreAnimating())
                     {
@@ -103,6 +136,13 @@ namespace PipeDreamClone
                             HandleMouseInput(Mouse.GetState());
 
                     }
+                    break;
+
+                case GameStates.GameOver:
+                    gameOverTime -= (float) gameTime.ElapsedGameTime.TotalSeconds;
+
+                    if (gameOverTimer <= 0)
+                        gameState = GameStates.TitleScreen
                     break;
             }
 
@@ -123,7 +163,7 @@ namespace PipeDreamClone
                 spriteBatch.End();
             }
 
-            if (gameState == GameStates.Playing)
+            if (gameState == GameStates.Playing || gameState == GameStates.GameOver)
             {
                 spriteBatch.Begin();
 
@@ -169,8 +209,39 @@ namespace PipeDreamClone
                     }
                 }
 
-                this.Window.Title = playerScore.ToString();
+                spriteBatch.DrawString(
+                        pericles36Font,
+                        playerScore.ToString();
+                        scoreDisplayOffset,
+                        Color.Black);
 
+                int waterHeight = (int)(MaxWaterHeight * (floodAmount / 100));
+                spriteBatch.Draw(
+                        bg,
+                        new Rectangle(
+                            (int)waterPositionOffset.X,
+                            (int)waterPositionOffset.Y + (MaxWaterHeight - waterHeight),
+                            WaterWidth,
+                            waterHeight),
+                        new Rectangle(
+                            (int)waterOverlayOffset.X,
+                            (int)waterOverlayOffset.Y + (MaxWaterHeight - waterHeight),
+                            WaterWidth,
+                            waterHeight),
+                        new Color(255, 255, 255, 180));
+
+
+                spriteBatch.End();
+            }
+
+            if (gameState == GameStates.GameOver)
+            {
+                spriteBatch.Begin();
+                spriteBatch.DrawString(
+                        pericles36Font,
+                        "G A M E  O V E R!",
+                        gameOverDisplayOffset,
+                        Color.Yellow);
                 spriteBatch.End();
             }
 
@@ -196,6 +267,7 @@ namespace PipeDreamClone
                         Piece.sides.RIGHT))
                     {
                         playerScore += CalcScore(PipeChain.Count);
+                        floodAmount = MathHelper.Clamp(floodAmount - CalcScore(PipeChain.Count) / 10, 0.0f, 100.0f);
 
                         foreach (Vector2 piece in PipeChain)
                         {
