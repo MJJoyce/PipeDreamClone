@@ -54,6 +54,12 @@ namespace PipeDreamClone
         Vector2 waterOverlayOffset = new Vector2(85, 245);
         Vector2 waterPositionOffset = new Vector2(478, 338);
 
+        // Variables for handling difficult levels
+        int curLevel = 0;
+        int linesCompThisLvl = 0;
+        const float floodIncreasePerLvl = 0.5f;
+        Vector2 levelOffset = new Vector2(512, 215);
+
         public Game1()
         {
             graphics = new GraphicsDeviceManager(this);
@@ -100,6 +106,9 @@ namespace PipeDreamClone
                         gameBoard.GeneratePieces(false);
                         playerScore = 0;
                         floodAmount = 0;
+                        curLevel = 0;
+                        floodIncreaseAmount = 0.0f;
+                        StartNewLevel();
                         gameState = GameStates.Playing;
                     }
                     break;
@@ -216,6 +225,13 @@ namespace PipeDreamClone
                         scoreDisplayOffset,
                         Color.Black);
 
+                spriteBatch.DrawString(
+                    pericles36Font,
+                    curLevel.ToString(),
+                    levelOffset,
+                    Color.Black);
+                    
+
                 int waterHeight = (int)(MaxWaterHeight * (floodAmount / 100));
                 spriteBatch.Draw(
                         bg,
@@ -268,6 +284,7 @@ namespace PipeDreamClone
                         Piece.sides.RIGHT))
                     {
                         playerScore += CalcScore(PipeChain.Count);
+                        linesCompThisLvl++;
                         floodAmount = MathHelper.Clamp(floodAmount - CalcScore(PipeChain.Count) / 10, 0.0f, 100.0f);
 
                         foreach (Vector2 piece in PipeChain)
@@ -284,6 +301,9 @@ namespace PipeDreamClone
                                 (int)piece.Y,
                                 Piece.pieceTypes.EMPTY);
                         }
+
+                        if (linesCompThisLvl >= 10)
+                            StartNewLevel();
                     }
                 }
             }
@@ -370,6 +390,16 @@ namespace PipeDreamClone
                     Piece.height / 2),
                 SpriteEffects.None,
                 0.0f);
+        }
+
+        private void StartNewLevel()
+        {
+            curLevel++;
+            floodAmount = 0.0f;
+            linesCompThisLvl = 0;
+            floodIncreaseAmount += floodIncreasePerLvl;
+            gameBoard.Clear();
+            gameBoard.GeneratePieces(false);
         }
     }
 }
